@@ -1,0 +1,5 @@
+//Muestra los datos de los dos empleados
+
+deparTrabajo = db.departamentos.findOne({_id:'dep1'})
+empleadosDepartamento = db.empleados.find({_id: {$in:deparTrabajo.emple}})
+

@@ -1,0 +1,147 @@
+/*1ª) Listar todos los trabajadores. Mostrando su nombre y apellidos,
+ la ciudad en la que viven y el sueldo.*/
+ db.trabajadores.aggregate([
+    
+    {
+        $unwind:"$nombre"
+    },
+    {
+        $project:
+        {
+            _id:0,
+            'nombre.ape2':1,
+            'nombre.ape1':1,
+            'nombre.nomb':1,
+            'direccion.poblacion':1,
+            'salario':1
+
+
+
+
+
+        }
+    }
+]);
+
+/*2ª) Listar los trabajadores que viven en Toledo.*/
+db.trabajadores.aggregate([
+
+    {
+        $unwind:"$nombre"
+    },
+    {
+        $match:{'direccion.poblacion':'Toledo'}
+    },
+    {
+        $project:
+        {
+            _id:0,
+            'nombre.ape2':1,
+            'nombre.ape1':1,
+            'nombre.nomb':1
+            
+
+
+
+
+
+        }
+    }
+]);
+
+/*3ª)Listar los trabajadores que tienen idiomas.*/
+db.trabajadores.find({'idiomas':{$exists:true}})
+
+/*4ª) Listar los trabajadores que tienen idiomas.*/
+//Igual que el 3
+
+/*5ª) Listar los trabajadores cuya edad este comprendida entre 40 y 50 años.*/
+db.trabajadores.aggregate([
+
+    {
+        $unwind:"$nombre"
+    },
+    {
+        $match:{edad:{$gte:40, $lte:50}}
+    },
+    {
+        $project:
+        {
+            _id:0,
+            'nombre.ape2':1,
+            'nombre.ape1':1,
+            'nombre.nomb':1,
+            edad:1
+        }
+    }
+]);
+
+/*6ª) Listar todos los trabajadores. Mostrando su nombre y apellidos, 
+la ciudad en la que viven, el sueldo, las retenciones de IRPF,
+ suponemos el 10%, las retenciones de ls SS, suponemos el 8% y el sueldo neto.*/
+ db.trabajadores.aggregate([
+    {
+      $unwind: "$nombre"
+    },
+    {
+      $unwind: "$direccion"
+    },
+    {
+      $project: {
+        _id:0,
+        nombre: "$nombre.nomb",
+        PrimApellido: "$nombre.ape1",
+        SegApellido: "$nombre.ape2",
+        Ciudad: "$direccion.poblacion",
+        Sueldo: "$salario",
+        RetencionIRPF: {$multiply: ["$salario",0.1]},
+        RetencionSS: {$multiply: ["$salario",0.08]},
+        SueldoNeto: {$subtract: ["$salario", {$add: [{$multiply: ["$salario",0.1]},{$multiply: ["$salario",0.08]}]}]}
+      }
+    }
+    ])
+    
+/*7ª) Insertar un trabajador añadiéndole los siguientes campos: nombre, primer apellido,
+ segundo apellido, dirección, salario, un array con los idiomas que habla y la edad.*/
+ db.trabajadores.insertOne({nombre: {nomb:"Manuel",ape1:"Dominguez", ape2:"Dominguez"},
+                        direccion: {poblacion: "Vigo", calle : "Calle Dario Duran 3"},
+						salario: 3000,
+						idiomas: ['Gallego', 'Inglés', 'Castellano'],
+						edad:23
+						})
+
+/*8ª) A los trabajadores de Toledo se les va aumentar el sueldo en 100 €. Actualizar la BBDD.*/
+db.trabajadores.updateMany({'direccion.poblacion':"Toledo"}, {$inc:{salario:100}})
+
+/*9ª) A los trabajadores de Madrid añadirles el campo estadoCivil con el valor Soltero.
+ Actualizar la BBDD.*/
+ db.trabajadores.updateOne({'direccion.poblacion':"Madrid"}, {$set:{EstadoCivil:"Soltero"}})
+
+ /*10ª) A la trabajadora Raquel García Amo se le van a eliminar las primas. Actualizar la BBDD.*/
+db.trabajadores.updateOne({'nombre.nomb':"Raquel", 'nombre.ape1':"García", 'nombre.ape2':"del Amo"}, {$unset:{primas:""}})
+
+/*11ª) Listar los trabajadores que tienen como oficio Profesor.*/
+db.trabajadores.find({oficios:"Profesor"}, {_id:0, 'nombre.nomb':1, 'nombre.ape1':1, 'nombre.ape2':1})
+
+/*12ª) Al crear el array de Oficios del trabajador Fernando Romo Pérez, 
+la añadimos el oficio Representante cambiarlo por Comercial.*/
+db.trabajadores.updateOne({'nombre.nomb':"Fernando", 'nombre.ape1':"Romo", 'nombre.ape2':"Pérez", oficios:"Representante"}, {$set:{'oficios.$':"Comercial"}})
+
+/*13ª) A la empleada María Suárez Verdes añadirle el oficio de Gerente.*/
+db.trabajadores.updateOne({'nombre.nomb':"María", 'nombre.ape1':"Suárez", 'nombre.ape2':"Verdes"}, {$push:{oficios:{$each:["Gerente"]}}})
+
+/*14ª) A la empleada María Suárez Verdes se le suprime la primera prima.*/
+db.trabajadores.updateOne({'nombre.nomb':"María", 'nombre.ape1':"Suárez", 'nombre.ape2':"Verdes"}, {$pop:{primas:-1}})
+
+/*15ª) A la trabajadora Alicia Ramos Martín se le eliminan las primas mayores de 30.*/
+db.trabajadores.updateOne({'nombre.nomb':"Alicia", 'nombre.ape1':"Ramos", 'nombre.ape2':"Martín"}, {$pull:{primas:{$gte:30}}})
+
+/*16ª) Eliminar a los trabajadores de Toledo.*/
+db.trabajadores.deleteMany({'direccion.poblacion':"Toledo"})
+
+/*17ª) Listar los trabajadores cuya categoría contenga la palabra Director.*/
+db.trabajadores.find({oficios:"Director"}, {_id:0, 'nombre.nomb':1, 'nombre.ape1':1, 'nombre.ape2':1})
+
+
+
+

@@ -1,0 +1,337 @@
+db.articulos.aggregate([
+    {
+        $match:{categoría:"Deportes"}
+    },
+   
+    {
+        $project:
+        {
+            articulo:{$toUpper:"$denominacion"},
+            importe:{$multiply:["$pvp","$uv"]},
+            //categoría:1,
+            stockActual:{$subtract:["$stock","$uv"]},
+            aReponer:{
+                $cond:[{$lte:[{$subtract:["$stock","$uv"]},0]},true,false]
+
+            }
+        }
+    }
+    //{
+        //$match:{categoría:"Deportes"}
+    //},
+    
+]);
+
+/*$match. Puede ir arriba o abajo, si se coloca abajo se debe poner en el $project categoría:1
+OJO LA TILDE DE CATEGORÍA*/
+db.articulos.aggregate([
+    {
+        $match:{categoría:"Deportes"}
+    },
+   
+    {
+        $project:
+        {
+            articulo:{$toUpper:"$denominacion"},
+            importe:{$multiply:["$pvp","$uv"]},
+            //categoría:1,
+            stockActual:{$subtract:["$stock","$uv"]},
+            aReponer:{
+                $cond:[{$lte:[{$subtract:["$stock","$uv"]},0]},true,false]
+
+            }
+        }
+    }
+    //{
+        //$match:{categoría:"Deportes"}
+    //},
+    
+]);
+
+//Group. con esta estructura se listan las categorias que tiene el archivo
+db.articulos.aggregate([
+    {
+        $group:{
+            _id:"$categoría"
+        }
+    }
+]);
+//Muestra los totales por ids: informatica, escritorio y deportes
+db.articulos.aggregate([
+    {
+        $group:{
+            _id:"$categoría",
+            //precio:"$pvp"
+            numVentas:{$sum:1},
+            sumaUnidades:{$sum:"$uv"},
+            precioMedio:{$avg:"$pvp"},
+            totalImporte:{$sum:{$multiply:["$pvp","$uv"]}}
+        }
+    }
+]);
+
+/*si en el id le pones null, te muestra los totales de los articulos con id null
+que en este caso solo hay 1*/
+db.articulos.aggregate([
+    {
+        $group:{
+            _id:"null",
+            //precio:"$pvp"
+            numVentas:{$sum:1},
+            sumaUnidades:{$sum:"$uv"},
+            precioMedio:{$avg:"$pvp"},
+            totalImporte:{$sum:{$multiply:["$pvp","$uv"]}}
+        }
+    }
+]);
+/* Hace toda la sua de todos los productos de la categoría informatica*/
+db.articulos.aggregate([
+    {$match:{'categoría':"Informática"}},
+    {
+        $group:
+        {
+            _id:"informática",
+            "numVentas":{$sum:1},
+            "totalUnidades": {$sum:'$uv'},
+            "precioMedio":{$avg:'$pvp'},
+            "totalImporte":{$sum:{$multiply:['$uv','$pvp']}}
+        }
+    }
+]);
+
+/*Hace la suma de todos los prudctos por categorís*/
+db.articulos.aggregate([
+    {
+        $group:
+        {
+            _id:"$categoría",
+            "numVentas":{$sum:1},
+            "totalUnidades": {$sum:'$uv'},
+            "precioMedio":{$avg:'$pvp'},
+            "totalImporte":{$sum:{$multiply:['$uv','$pvp']}}
+        }
+    }
+]);
+
+/*Con la siguiente funcion se busca el artículo mas caro,
+OJO! solo sale el precio no el nombre del producto*/
+db.articulos.aggregate([
+    {
+        $group:
+        {
+            _id:"null",
+            "masCaro":{$max:"$pvp"}
+        }
+    }
+]);
+
+/*Nº de productos de 100€ o mas en cada categoria*/
+db.articulos.aggregate([
+    {
+        $match:{pvp:{$gte:100}}
+    },
+    {
+        $group:
+        {
+            _id:{categoría: '$categoría'},
+            numArticulos:{$sum:1}
+        }
+    },
+    {
+        $project:{
+            _id:0,
+            categoría:"$_id",
+            total:"$numArticulos"
+        }
+
+    }
+]);
+
+/*Obtener por categoría el artículo mas caro*/
+db.articulos.aggregate([
+    {
+        $sort:{categoría:-1, pvp:-1, denominacion:-1}
+    },
+    {
+        $group:{
+            _id:"$categoría",
+            masCaro:{$first:"$denominacion"},
+            precio:{$first:"$pvp"}
+        }
+    }
+]);
+/*Mostrar los trabajadores de la factoria La Panaderia Principal*/
+db.factorias.aggregate([
+    {$match:{'factoria.nombre':"La Panaderia Principal"}}
+]);
+
+/*La siguiente consulta muestra el nombre de las ciudades en la que hay esas Panaderias,
+en este caso hay dos en Vigo*/
+db.factorias.aggregate([
+    {$match:{'factoria.nombre':"La Panaderia Principal"}},
+    {
+        $project:{
+            'factoria.nombre':1,
+            'factoria.ciudad':1
+        }
+
+    }
+]);
+
+/*La siguiente consulta muestra el nombre de la factoria, la ciudad y los trabajadores,
+estos ultimos en forma de array*/
+db.factorias.aggregate([
+    {$match:{'factoria.nombre':"La Panaderia Principal"}},
+    {
+        $project:{
+            'factoria.nombre':1,
+            'factoria.ciudad':1,
+            'trabajadores':1
+        }
+
+    }
+]);
+
+/*La siguiente consulta muestra el nombre de la factoria, la ciudad y los trabajadores,
+estos ultimos YA NO SON array*/
+db.factorias.aggregate([
+    {$match:{'factoria.nombre':"La Panaderia Principal"}},
+    {
+        $project:{
+            'factoria.nombre':1,
+            'factoria.ciudad':1,
+            'trabajadores':1
+        }
+
+    },
+    {
+        $unwind:"$trabajadores"
+    }
+]);
+
+db.factorias.aggregate([
+    {
+        $project:{
+            _id:0,
+            'tarabajadores.nombre.apellidos':1
+        }
+
+        },
+        {
+            $unwind:"$trabajadores"
+        },
+        {
+            $sort:{'trabajadores.nombre.apellidos':1}
+        }
+    
+]);
+
+/*Listar los datos del trabajador con dni 12121214P*/
+db.factorias.aggregate([
+    {
+        $unwind:"$trabajadores"
+    },
+    {
+        $match:{'trabajadores.dni':'12121214P'}
+    },
+    {
+        $project:
+        {
+            _id:0,
+            
+            'trabajadores.nombre.apellidos':1,
+            'trabajadores.nombre.nom':1,
+
+
+
+        }
+    }
+]);
+
+/*Obtener el nº de trabajadores el sueldo maximo, el sueldo minimo, el sueldo medio,
+ el primer y ultimo trabajador de cada categoría*/
+ db.factorias.aggregate([
+    {
+        $unwind:"$trabajadores"
+    },
+    {
+        $group:
+        {
+            {   
+                _id:'$factoria.nombre'
+                categoria:'$trabajadores.categoría'
+            },
+            
+        
+        cuenta:{$sum:1},
+        maxSueldo:{$max: '$trabajadores.sueldo'},
+        minSUeldo:{$min: '$trabajadores.sueldo'},
+        medSueldo:{$avg: '$trabajadores.sueldo'},
+        primero:{$first: '$trabajadores.sueldo'},
+        ultimo:{$last: '$trabajadores.sueldo'}
+    }
+
+    }
+    ]);
+
+/*Calcular el sueldo de cada trabajador, el irpf, la SS y el sueldo neto*/
+db.factorias.aggregate([
+    {
+        $unwind:"$trabajadores"
+    },
+    {
+        $project:
+        {
+            
+                _id:0,
+                nombre:'$trabajadores.nombre.nom',
+                apepllidos:'$trabajadores.nombre.apellidos',
+                sueldo:'$trabajadores.sueldo',
+                impIrpf:{$multiply:['$trabajadores.sueldo', '$trabajadores.irpf']},
+                impSS:{$multiply:['$trabajadores.sueldo', '$trabajadores.ss']},
+               
+        }
+
+    },
+    {
+        $project:
+        {
+                _id:0,
+                nombre:1,
+                apepllidos:1,
+                sueldo:1,
+                impIrpf:1,
+                impSS:1,
+                sueldoNeto:{$subtract:['$sueldo', {$add:['$impIrpf', '$impSS']}]}
+        }
+    }
+    
+]);
+
+/*Total del sueldo, total de impIrpf, total impSS, totalSueldoBrutoMedio por categoria*/
+db.factorias.aggregate([
+    {
+        $unwind:"$trabajadores"
+    },
+    {
+        $group:
+        {
+            _id:'$trabajadores.cotegoría',
+            totalSueldos:{$sum:'$trabajadores.sueldo'},
+            totalIrpf:{$sum:{$multiply:['$trabajadores.sueldo', '$trabajadores.irpf']}},
+            totalSS:{$sum:{$multiply:['$trabajadores.sueldo', '$trabajadores.ss']}},
+            sueldoMedio:{$avg:'$trabajadores.sueldo'}
+               
+        }
+    }
+]);
+
+//La siguiente sentencia añade la fecha y la hora de ese mismo momento
+db.fechas.insertOne({codigo:1, denominacion:'Portatil HP', fecha: new Date()})
+
+//La sigueinte sentencia añade una fecha que se le indica
+db.fechas.insertOne({codigo:1, denominacion: "Lapices", fecha: new Date("2022-12-12")})
+
+
+
+
