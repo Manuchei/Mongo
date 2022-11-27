@@ -1,0 +1,55 @@
+//1
+db.ventas.aggregate([
+    {
+        $unwind:'$productos'
+    },
+    {
+        $group:{
+            _id:{'productos':'$productos.nbProducto'},
+            totalImporte:{$sum:{$multiply:['$productos.precioVenta', '$productos.cantidad']}},
+            totalIVA:{$sum:{$multiply:['$productos.precioVenta', '$productos.cantidad', 0.21]}},
+            total:{$sum:{$multiply:['$productos.precioVenta', '$productos.cantidad', 1.21]}}
+
+        }
+    }
+])
+//2
+db.ventas.find({productos:{$exists:false}})
+//3
+db.ventas.find({'productos.Proveedor.nombre':'Apple'},{cliente:1})
+//4
+db.ventas.update({"cliente.clNombre":"Luisa Maron"},
+{
+    $addToSet:{productos:
+{
+    "nbProducto":"Toshiba Portege Z30t-B-10U + Bolsa Premium",
+    "precioCompra":980,
+    "precioVenta":1245,
+    "cantidad":4,
+    "Proveedor":{"codProveedor": "14256654Y", "nombre": "Toshiba"}
+}}})
+//5
+db.ventas.aggregate([
+    {
+        $unwind:"$productos"
+
+    },
+    {
+        $match:{"productos.descripcion":{$regex:".*Windows", $options:"i"}}
+    },
+    {
+        $project:{
+            _id:0,
+            producto:{$toUpper:"$productos.nbProducto"},
+            beneficio:{$subtract:["$productos.precioVenta", "$productos.precioCompra"]}
+        }
+    }
+    ])
+//6
+db.ventas.update({"cliente.clNombre":"Cristobal Garcia"}, {$pull:{"nbProducto":"Canon Pixma MX475 WiFi/Fax/Duplex. Impresora"}})
+//7
+db.ventas.find({$or:[{"cliente.clDireccion":{$regex:".*Vigo", $options:"i"}},{"cliente.clDireccion":{$regex:".*Madrid", $options:"i"}}]}, {cliente:1})
+//9
+db.ventas.aggregate([ { $unwind: '$productos' }, { $sort: {'productos.Proveedor.nombre': 1, precioVenta:1} }, { $group: { _id: '$productos.Proveedor.nombre', producto: {$first:'$productos.nbProducto'}, precio:{$first: '$productos.precioVenta'} } } ])
+//10
+db.ventas.remove({productos:{exists:"false"}})
